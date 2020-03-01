@@ -2,6 +2,7 @@
 
 Use Notion to write, use hexo to deploy.
 
+[中文文档](https://www.notion.so/singee/NotionBlog-44f5de5864fa4ef19dda4d7f57ab3652)
 
 ## Usage
 

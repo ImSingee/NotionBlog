@@ -13,8 +13,6 @@ import (
 var c *tomarkdown.Converter
 var lastBlock *notionapi.Block
 
-
-
 func getURLTag(pageID string, pageTitle string) (string, error) {
 	pageID = notionapi.ToDashID(pageID)
 	noDashedPageID := notionapi.ToNoDashID(pageID)
@@ -153,6 +151,18 @@ func renderGist(block *notionapi.Block) {
 	c.Newline()
 }
 
+func renderImage(block *notionapi.Block) {
+	source := block.Source
+	imageUrl := downloadImage(source)
+
+	captions := block.GetCaption() //c.InlineToString()
+	caption := ""
+	if captions != nil && len(captions) != 0 {
+		caption = c.InlineToString(captions[0])
+	}
+	c.Printf("![%s](%s)\n", caption, imageUrl)
+}
+
 func render(block *notionapi.Block) bool {
 	if lastBlock != nil && lastBlock.Type != block.Type {
 		c.Newline()
@@ -165,6 +175,8 @@ func render(block *notionapi.Block) bool {
 		renderPage(block)
 	case notionapi.BlockText:
 		renderText(block)
+	case notionapi.BlockImage:
+		renderImage(block)
 	case notionapi.BlockCode:
 		renderCode(block)
 	case notionapi.BlockTodo:
@@ -186,5 +198,7 @@ func pageToMarkdown(page *notionapi.Page) []byte {
 	c.RewriteURL = rewriteURL
 
 	lastBlock = nil
-	return c.ToMarkdown()
+	result := c.ToMarkdown()
+	waitDownloadImage()
+	return result
 }
