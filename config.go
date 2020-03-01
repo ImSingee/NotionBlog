@@ -7,7 +7,6 @@ import (
 
 func setDefaultConfig() {
 	viper.SetDefault("version", 1)
-	viper.SetDefault("converter.version", 0)
 	viper.SetDefault("user.locale", "en")
 	viper.SetDefault("user.timezone", "Etc/UTC")
 	viper.SetDefault("render.checkbox", false)

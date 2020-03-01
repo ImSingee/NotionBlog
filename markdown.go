@@ -15,6 +15,34 @@ var sourceDir string
 var postsDir string
 var pagesDir string
 
+var converterVersionViper *viper.Viper
+
+func init() {
+	converterVersionViper = viper.New()
+	converterVersionViper.SetDefault("converter", 0)
+}
+
+func getLastConverterVersion() int {
+	converterVersionViper.SetConfigFile(path.Join(notionDir, "version.yml"))
+	if err := converterVersionViper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			log.Println("The source/_notion/version.yml file is not exist, create one.")
+		} else {
+			log.Println("Cannot open the version file, All pages will be rendered again.", err)
+		}
+	}
+
+	return converterVersionViper.GetInt("converter")
+}
+
+func saveCurrentConverterVersion() {
+	converterVersionViper.Set("converter", converterVersion)
+	err := converterVersionViper.WriteConfigAs(path.Join(notionDir, "version.yml"))
+	if err != nil {
+		log.Println("Warning: Cannot save version file.", err)
+	}
+}
+
 func getFilename(pageID string) string {
 	return notionapi.ToNoDashID(pageID) + ".md"
 }
@@ -62,7 +90,7 @@ func getReRenderedPages() []string {
 		if viper.GetBool("converter.force") {
 			return true
 		}
-		if viper.GetInt("converter.version") != converterVersion {
+		if getLastConverterVersion() != converterVersion {
 			return true
 		}
 
@@ -87,5 +115,5 @@ func generateMarkdown() {
 		}
 	}
 
-	viper.Set("converter.version", converterVersion)
+	saveCurrentConverterVersion()
 }

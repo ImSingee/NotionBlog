@@ -66,6 +66,4 @@ func main() {
 
 	generateUrlMap()
 	generateMarkdown()
-
-	saveConfig()
 }
