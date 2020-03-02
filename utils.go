@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/kjk/notionapi"
 	"strings"
 	"unicode"
 )
@@ -41,4 +42,10 @@ func trimAndConvertSpace(s string) string {
 		}
 	}
 	return b.String()
+}
+
+func toDashIDs(ids []string) {
+	for i := range ids {
+		ids[i] = notionapi.ToDashID(ids[i])
+	}
 }

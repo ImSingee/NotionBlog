@@ -161,17 +161,13 @@ func fetchDatabaseInfo() {
 
 func downloadAllPages() {
 	for _, db := range dbs {
-		for _, id := range db.subpageIDs {
-			log.Print("Download page: ", id)
-			downloadedPages, err := downloader.DownloadPagesRecursively(id, nil)
-			if err != nil {
-				log.Fatal("Cannot download some pages.", err)
-			}
-			for _, downloadedPage := range downloadedPages {
-				updatedPages = append(updatedPages, downloadedPage.ID)
-			}
+		partUpdatedPages, err := downloadPagesAndSubPagesOnDemand(downloader, db.subpageIDs)
+		if err != nil {
+			log.Fatal("Fail to download pages in db ", db.collectionViewID, ": ", err)
 		}
+		updatedPages = append(updatedPages, partUpdatedPages...)
 	}
+	log.Println("---updatedPages---", updatedPages)
 }
 
 // parse existed reference tree, generate new reference tree
