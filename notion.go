@@ -52,7 +52,6 @@ func initUser() {
 }
 
 func initDownloader() {
-	cacheDir := path.Join(notionDir, "cache")
 	cache, err := caching_downloader.NewDirectoryCache(cacheDir)
 	if err != nil {
 		log.Fatal("Cannot use source/_notion/cache dir")

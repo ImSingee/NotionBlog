@@ -9,10 +9,12 @@ import (
 )
 
 var rootDir string
+var cacheDir string
 
 // parse root param and open config file
 func clean() {
 	flag.StringVar(&rootDir, "root", ".", "The root of your Hexo blog")
+	flag.StringVar(&cacheDir, "cache", "", "The root of your Hexo blog")
 	flag.Parse()
 
 	rootDir, err := filepath.Abs(rootDir)
@@ -54,6 +56,28 @@ func clean() {
 		}
 	}
 	log.Println("The notion dir is", notionDir)
+
+	if cacheDir == "" {
+		cacheDir = path.Join(notionDir, "cache")
+	} else {
+		cacheDir, err = filepath.Abs(cacheDir)
+		if err != nil {
+			log.Fatal("The cache dir is invalid, maybe you should pass absolute path.", err)
+		}
+	}
+	if _, err := os.Stat(cacheDir); err != nil {
+		if os.IsNotExist(err) {
+			log.Println("Cannot find cache dir, create one.")
+
+			err := os.Mkdir(cacheDir, 0755)
+			if err != nil {
+				log.Fatal("Cannot create dir ", cacheDir, ": ", err)
+			}
+		} else {
+			log.Fatal("Cannot open ", cacheDir, ": ", err)
+		}
+	}
+	log.Println("The cache dir is", cacheDir)
 
 	return
 }
