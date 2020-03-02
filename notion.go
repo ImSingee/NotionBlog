@@ -260,6 +260,13 @@ func handleTree() {
 		tree.Set("sub."+page, existedSubPages)
 	}
 
+	// top page -> sub page
+	for _, page := range toDeleteTopPages {
+		if _, ok := allPagesMap[page]; ok {
+			updatedPages = append(updatedPages, page)
+		}
+	}
+
 	// save new tree
 	err := tree.WriteConfigAs(treeFilename)
 	if err != nil {
