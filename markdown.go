@@ -70,8 +70,13 @@ func save(pageID string, data []byte) error {
 }
 
 func remove(pageID string) {
-	_ = os.Remove(path.Join(postsDir, getFilename(pageID)))
-	_ = os.Remove(path.Join(pagesDir, getFilename(pageID)))
+	filename := getFilename(pageID)
+
+	postFilename := path.Join(postsDir, filename)
+	_ = os.Remove(postFilename)
+
+	pageFilename := path.Join(pagesDir, filename)
+	_ = os.Remove(pageFilename)
 }
 
 func notionToMarkdown(pageID string) []byte {
@@ -104,9 +109,6 @@ func getReRenderedPages() []string {
 }
 
 func generateMarkdown() {
-	postsDir = path.Join(sourceDir, "_posts")
-	pagesDir = path.Join(sourceDir, "pages")
-
 	for _, pageID := range getReRenderedPages() {
 		log.Println("Render:", pageID)
 		err := save(pageID, notionToMarkdown(pageID))

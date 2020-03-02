@@ -79,6 +79,9 @@ func clean() {
 	}
 	log.Println("The cache dir is", cacheDir)
 
+	postsDir = path.Join(sourceDir, "_posts")
+	pagesDir = path.Join(sourceDir, "pages")
+
 	return
 }
 

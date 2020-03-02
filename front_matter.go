@@ -353,3 +353,29 @@ func newFrontMatter(ds idToNameMap) *FrontMatter {
 
 	return f
 }
+
+func readFrontMatterValue(block *notionapi.Block, f *FrontMatter, name string) string {
+	// block should be the page.Root()
+	idMap, ok := f.nameToId[name]
+	if !ok {
+		return ""
+	}
+	property, ok := block.Properties[idMap.Id]
+	if !ok { // not exist
+		return f.getDefaultFrontMatter(name, idMap.Type, block)
+	} else {
+		return f.getFrontMatterForType(name, idMap.Type, property, block)
+	}
+}
+
+func checkIfPublished(page *notionapi.Page, f *FrontMatter) bool {
+	status := readFrontMatterValue(page.Root(), f, "status")
+	trueValues := []string{"", getAlias("published", "Published")}
+	for _, trueValue := range trueValues {
+		if strings.ToLower(status) == strings.ToLower(trueValue) {
+			return true
+		}
+	}
+
+	return false
+}

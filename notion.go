@@ -121,6 +121,7 @@ func getCollectionIDs() {
 	}
 }
 
+// topLevelPages, topLevelPagesMap will be assigned
 func fetchDatabaseInfo() {
 	for _, db := range dbs {
 		log.Println("Fetch data for database ", db.pageID)
@@ -131,21 +132,13 @@ func fetchDatabaseInfo() {
 			log.Fatal("Can not read data from view.", err)
 		}
 
-		// Get pages in the collection directly
-		db.subpageIDs = resp.Result.BlockIDS
-
-		topLevelPages = append(topLevelPages, db.subpageIDs...)
-		for _, id := range db.subpageIDs {
-			// Save the page->db map
-			topLevelPagesMap[id] = db
-		}
-
+		// Read collection Basic Data
 		collection := resp.RecordMap.Collections[db.collectionID]
 		if collection == nil {
 			log.Fatal("Can not read collection data from view.", err)
 		}
 
-		// Get collection schema to build front matter
+		// Build front matter
 		m := make(idToNameMap, len(collection.Collection.Schema))
 		for id, schema := range collection.Collection.Schema {
 			m[id] = &idToNameStructure{
@@ -153,28 +146,78 @@ func fetchDatabaseInfo() {
 				Type: schema.Type,
 			}
 		}
-
 		db.frontMatter = newFrontMatter(m)
+
+		// Get pages in the collection directly
+		for _, id := range resp.Result.BlockIDS {
+			topLevelPagesMap[id] = db
+		}
+		db.subpageIDs = resp.Result.BlockIDS
+		topLevelPages = append(topLevelPages, resp.Result.BlockIDS...)
 	}
 }
 
+// updatedPages will be assigned
 func downloadAllPages() {
 	for _, db := range dbs {
+		log.Println("Download pages for db", db.collectionViewID)
 		partUpdatedPages, err := downloadPagesAndSubPagesOnDemand(downloader, db.subpageIDs)
 		if err != nil {
 			log.Fatal("Fail to download pages in db ", db.collectionViewID, ": ", err)
 		}
+		log.Println(len(partUpdatedPages), "pages updated.")
 		updatedPages = append(updatedPages, partUpdatedPages...)
 	}
+	log.Println("In all databases, totally", len(updatedPages), "pages updated.")
+}
+
+// topLevelPages, topLevelPagesMap, updatedPages, db.subpageIDs will be modified
+func filterPublishedPages() {
+	newTopLevelPages := make([]string, 0, len(topLevelPages))
+	newTopLevelPagesMap := make(map[string]*database, len(topLevelPagesMap))
+
+	newUpdatedPages := make([]string, 0, len(updatedPages))
+	updatedPagesMap := make(map[string]struct{}, len(updatedPages))
+	for _, p := range updatedPages {
+		updatedPagesMap[p] = struct{}{}
+	}
+
+	for _, db := range dbs {
+		newSubpageIDs := make([]string, 0, len(db.subpageIDs))
+		for _, pageID := range db.subpageIDs {
+			page, err := downloader.ReadPageFromCache(pageID)
+			if err != nil {
+				log.Fatal("Unknown error when read page from cache. ", err)
+			}
+			if checkIfPublished(page, db.frontMatter) {
+				newSubpageIDs = append(newSubpageIDs, pageID)
+				newTopLevelPages = append(newTopLevelPages, pageID)
+				newTopLevelPagesMap[pageID] = db
+				if _, ok := updatedPagesMap[pageID]; ok {
+					newUpdatedPages = append(newUpdatedPages, pageID)
+				}
+			}
+		}
+		db.subpageIDs = newSubpageIDs
+	}
+
+	topLevelPages = newTopLevelPages
+	updatedPages = newUpdatedPages
+	topLevelPagesMap = newTopLevelPagesMap
+	//
+	//log.Println("topLevelPages", topLevelPages)
+	//log.Println("updatedPages", updatedPages)
+	//log.Println("topLevelPagesMap", topLevelPagesMap)
 }
 
 // parse existed reference tree, generate new reference tree
 // delete unused page cache, mark need to delete page
+// allPages, allPagesMap will be assigned
 func handleTree() {
+	treeFilename := path.Join(notionDir, "tree.yml")
+
 	oldTree := viper.New()
-	oldTree.SetConfigName("tree")
-	oldTree.SetConfigType("yaml")
-	oldTree.AddConfigPath(notionDir)
+	oldTree.SetConfigFile(treeFilename)
 
 	tree = viper.New()
 
@@ -226,37 +269,19 @@ func handleTree() {
 		}
 	}
 	// save new tree
-	err := tree.WriteConfigAs(path.Join(notionDir, "tree.yml"))
+	err := tree.WriteConfigAs(treeFilename)
 	if err != nil {
 		log.Println("Warning: Cannot write tree to file.", err)
 	}
 	// delete need delete files
 	for pageID, realDelete := range toDelete {
 		if realDelete {
-			// delete from cache
-			cacheFileName := downloader.NameForPageID(pageID)
-			log.Println("Will delete Cache ", cacheFileName)
-			downloader.Cache.Remove(cacheFileName)
 
 			// delete from source
 			log.Println("Will delete source markdown file ", pageID)
 			remove(pageID)
 		}
 	}
-}
-
-func findInBButNotInA(A []string, B []string) []string {
-	result := make([]string, 0)
-	m := make(map[string]struct{}, len(A))
-	for _, a := range A {
-		m[a] = struct{}{}
-	}
-	for _, b := range B {
-		if _, ok := m[b]; !ok {
-			result = append(result, b)
-		}
-	}
-	return result
 }
 
 func getAllSubPagesFromCacheRecursion(pageID string) []string {
@@ -292,6 +317,21 @@ func getAllSubPagesFromCacheRecursion(pageID string) []string {
 	return subPages
 }
 
+func clearCache() {
+	allPageIds, err := downloader.Cache.GetPageIDs()
+	toDashIDs(allPageIds)
+	if err != nil {
+		log.Fatal("Cannot get all pageIDs from cache.")
+	}
+	toDeletePageIds := findInBButNotInA(allPages, allPageIds)
+
+	for _, id := range toDeletePageIds {
+		cacheFileName := downloader.NameForPageID(id)
+		log.Println("Delete Cache:", cacheFileName)
+		downloader.Cache.Remove(cacheFileName)
+	}
+}
+
 // The function is used to generate helper data
 func generateBaseData() {
 	initClient()
@@ -302,5 +342,7 @@ func generateBaseData() {
 	getCollectionIDs()
 	fetchDatabaseInfo()
 	downloadAllPages()
+	filterPublishedPages()
 	handleTree()
+	clearCache()
 }

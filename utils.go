@@ -49,3 +49,17 @@ func toDashIDs(ids []string) {
 		ids[i] = notionapi.ToDashID(ids[i])
 	}
 }
+
+func findInBButNotInA(A []string, B []string) []string {
+	result := make([]string, 0)
+	m := make(map[string]struct{}, len(A))
+	for _, a := range A {
+		m[a] = struct{}{}
+	}
+	for _, b := range B {
+		if _, ok := m[b]; !ok {
+			result = append(result, b)
+		}
+	}
+	return result
+}

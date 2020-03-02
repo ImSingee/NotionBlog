@@ -34,3 +34,11 @@ func loadConfig() {
 	_ = viper.BindEnv("user.locale", "NOTION_USER_LOCALE")
 	_ = viper.BindEnv("user.timezone", "NOTION_USER_TIMEZONE")
 }
+
+func getAlias(key string, fallback string) string {
+	v := viper.GetString("alias." + key)
+	if v == "" {
+		return fallback
+	}
+	return v
+}
