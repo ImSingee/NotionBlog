@@ -376,6 +376,5 @@ func checkIfPublished(page *notionapi.Page, f *FrontMatter) bool {
 			return true
 		}
 	}
-
 	return false
 }

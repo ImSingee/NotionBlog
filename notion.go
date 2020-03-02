@@ -5,6 +5,7 @@ import (
 	"github.com/kjk/notionapi/caching_downloader"
 	"github.com/spf13/viper"
 	"log"
+	"os"
 	"path"
 	"strings"
 )
@@ -168,7 +169,6 @@ func downloadAllPages() {
 		log.Println(len(partUpdatedPages), "pages updated.")
 		updatedPages = append(updatedPages, partUpdatedPages...)
 	}
-	log.Println("In all databases, totally", len(updatedPages), "pages updated.")
 }
 
 // topLevelPages, topLevelPagesMap, updatedPages, db.subpageIDs will be modified
@@ -185,11 +185,13 @@ func filterPublishedPages() {
 	for _, db := range dbs {
 		newSubpageIDs := make([]string, 0, len(db.subpageIDs))
 		for _, pageID := range db.subpageIDs {
+
 			page, err := downloader.ReadPageFromCache(pageID)
 			if err != nil {
 				log.Fatal("Unknown error when read page from cache. ", err)
 			}
-			if checkIfPublished(page, db.frontMatter) {
+			checkResult := checkIfPublished(page, db.frontMatter)
+			if checkResult {
 				newSubpageIDs = append(newSubpageIDs, pageID)
 				newTopLevelPages = append(newTopLevelPages, pageID)
 				newTopLevelPagesMap[pageID] = db
@@ -204,10 +206,6 @@ func filterPublishedPages() {
 	topLevelPages = newTopLevelPages
 	updatedPages = newUpdatedPages
 	topLevelPagesMap = newTopLevelPagesMap
-	//
-	//log.Println("topLevelPages", topLevelPages)
-	//log.Println("updatedPages", updatedPages)
-	//log.Println("topLevelPagesMap", topLevelPagesMap)
 }
 
 // parse existed reference tree, generate new reference tree
@@ -221,8 +219,6 @@ func handleTree() {
 
 	tree = viper.New()
 
-	//oldTree.Set("enable", true)
-
 	if err := oldTree.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			log.Println("The source/_notion/tree.yml file is not exist, create one.")
@@ -235,52 +231,52 @@ func handleTree() {
 	tree.Set("top", topLevelPages)
 
 	// find need delete files
-	toDelete := make(map[string]bool, 0)
-	existedTopPages := oldTree.GetStringSlice("top")
-	for _, page := range existedTopPages {
+	oldTopPages := oldTree.GetStringSlice("top")
+
+	toDeleteTopPages := findInBButNotInA(topLevelPages, oldTopPages)
+	toDeleteSubPages := make(map[string]struct{}, 0)
+
+	for _, page := range oldTopPages {
 		oldSubPages := oldTree.GetStringSlice("sub." + page)
-		if _, ok := topLevelPagesMap[page]; !ok {
-			// the top page is deleted -> delete all sub pages
-			toDelete[page] = true
 
-			for _, subpage := range oldSubPages {
-				if _, ok := toDelete[subpage]; !ok {
-					toDelete[subpage] = true
-				}
-			}
-		} else {
-			existedSubPages := getAllSubPagesFromCacheRecursion(page)
-			allPages = append(allPages, page)
-			allPagesMap[page] = struct{}{}
-
-			allPages = append(allPages, existedSubPages...)
-			for _, pageID := range existedSubPages {
-				// prevent future delete
-				toDelete[pageID] = false
-				allPagesMap[pageID] = struct{}{}
-			}
-			for _, pageID := range findInBButNotInA(existedSubPages, oldSubPages) {
-				if _, ok := toDelete[pageID]; !ok {
-					toDelete[pageID] = true
-				}
-			}
-
-			tree.Set("sub."+page, existedSubPages)
+		for _, subpage := range oldSubPages {
+			toDeleteSubPages[subpage] = struct{}{}
 		}
 	}
+
+	for _, page := range topLevelPages {
+		allPages = append(allPages, page)
+		allPagesMap[page] = struct{}{}
+
+		existedSubPages := getAllSubPagesFromCacheRecursion(page)
+		allPages = append(allPages, existedSubPages...)
+
+		for _, pageID := range existedSubPages {
+			allPagesMap[pageID] = struct{}{}
+
+			delete(toDeleteSubPages, pageID)
+		}
+
+		tree.Set("sub."+page, existedSubPages)
+	}
+
 	// save new tree
 	err := tree.WriteConfigAs(treeFilename)
 	if err != nil {
 		log.Println("Warning: Cannot write tree to file.", err)
 	}
-	// delete need delete files
-	for pageID, realDelete := range toDelete {
-		if realDelete {
 
-			// delete from source
-			log.Println("Will delete source markdown file ", pageID)
-			remove(pageID)
-		}
+	// delete need delete top-level pages
+	for _, pageID := range toDeleteTopPages {
+		filename := path.Join(postsDir, getFilename(pageID))
+		log.Println("Will delete markdown file:", filename)
+		_ = os.Remove(filename)
+	}
+	// delete need delete sub pages
+	for pageID := range toDeleteSubPages {
+		filename := path.Join(pagesDir, getFilename(pageID))
+		log.Println("Will delete markdown file:", filename)
+		_ = os.Remove(filename)
 	}
 }
 
@@ -323,6 +319,7 @@ func clearCache() {
 	if err != nil {
 		log.Fatal("Cannot get all pageIDs from cache.")
 	}
+
 	toDeletePageIds := findInBButNotInA(allPages, allPageIds)
 
 	for _, id := range toDeletePageIds {
