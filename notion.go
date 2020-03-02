@@ -166,7 +166,6 @@ func downloadAllPages() {
 		}
 		updatedPages = append(updatedPages, partUpdatedPages...)
 	}
-	log.Println("---updatedPages---", updatedPages)
 }
 
 // parse existed reference tree, generate new reference tree
