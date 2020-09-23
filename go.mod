@@ -3,7 +3,8 @@ module github.com/ImSingee/NotionBlog
 go 1.13
 
 require (
-	github.com/kjk/notionapi v0.0.0-20200220221049-45ba7d333957
+	github.com/google/uuid v1.1.2 // indirect
+	github.com/kjk/notionapi v0.0.0-20200917054445-a24c325b3159
 	github.com/magiconair/properties v1.8.1
 	github.com/pelletier/go-toml v1.6.0 // indirect
 	github.com/spf13/afero v1.2.2 // indirect
