@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/kjk/notionapi"
 	"github.com/kjk/notionapi/caching_downloader"
-	"log"
 )
 
 type updatedPage struct {
@@ -66,6 +67,11 @@ func downloadPagesOnDemand(downloader *caching_downloader.Downloader, pageIDs []
 		if page == nil || latestVersions[i] > page.Root().Version {
 			log.Println("Download page:", pageID)
 			page, err = downloader.DownloadPage(pageID)
+
+			if err != nil {
+				return nil, err
+			}
+
 			pages[i].page = page
 			pages[i].updated = true
 		}
