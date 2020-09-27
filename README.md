@@ -1,4 +1,6 @@
 # Notion + Blog = NB!
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FImSingee%2FNotionBlog.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FImSingee%2FNotionBlog?ref=badge_shield)
+
 
 Use Notion to write, use hexo to deploy.
 
@@ -43,3 +45,5 @@ user:
 ## License
 
 This software is released under the Apache-2.0 license.
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FImSingee%2FNotionBlog.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FImSingee%2FNotionBlog?ref=badge_large)
