@@ -1,13 +1,14 @@
 package main
 
 import (
-	"github.com/kjk/notionapi"
-	"github.com/kjk/notionapi/caching_downloader"
-	"github.com/spf13/viper"
 	"log"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/kjk/notionapi"
+	"github.com/kjk/notionapi/caching_downloader"
+	"github.com/spf13/viper"
 )
 
 type database struct {

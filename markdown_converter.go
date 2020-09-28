@@ -3,11 +3,12 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
+	"strings"
+
 	"github.com/kjk/notionapi"
 	"github.com/kjk/notionapi/tomarkdown"
 	"github.com/spf13/viper"
-	"log"
-	"strings"
 )
 
 var c *tomarkdown.Converter
@@ -153,7 +154,7 @@ func renderGist(block *notionapi.Block) {
 
 func renderImage(block *notionapi.Block) {
 	source := block.Source
-	imageUrl := downloadImage(source)
+	imageUrl := downloadImage(source, block)
 
 	captions := block.GetCaption() //c.InlineToString()
 	caption := ""

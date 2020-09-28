@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/spf13/viper"
 	"io"
 	"log"
 	"net/http"
@@ -10,6 +9,9 @@ import (
 	"path"
 	"strings"
 	"sync"
+
+	"github.com/kjk/notionapi"
+	"github.com/spf13/viper"
 )
 
 var imageWg sync.WaitGroup
@@ -19,8 +21,7 @@ func init() {
 	imageClient = &http.Client{}
 }
 
-func downloadImage(source string) string {
-
+func downloadImage(source string, block *notionapi.Block) string {
 	imageUrl, err := url.Parse(source)
 	if err != nil {
 		return source
@@ -36,7 +37,7 @@ func downloadImage(source string) string {
 	downloadFilename := imageUrl.Path[len("/secure.notion-static.com"):]
 
 	imageWg.Add(1)
-	go downloadImageProcess(source, downloadFilename)
+	go downloadImageProcess(source, downloadFilename, block)
 
 	return "/images" + downloadFilename
 }
@@ -54,9 +55,12 @@ func createFile(filename string) (*os.File, error) {
 	return imageFile, err
 }
 
-func downloadImageProcess(imageUrl, filename string) {
+func downloadImageProcess(imageUrl, filename string, block *notionapi.Block) {
 	defer imageWg.Done()
-	req, err := http.NewRequest("GET", "https://www.notion.so/image/"+url.QueryEscape(imageUrl), nil)
+
+	url := "https://www.notion.so/image/" + url.QueryEscape(imageUrl) + "?table=block&id=" + block.ID
+
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Fatal("Cannot download image:", imageUrl, ". Err:", err)
 		return
