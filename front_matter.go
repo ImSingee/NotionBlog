@@ -1,11 +1,12 @@
 package main
 
 import (
+	"log"
+	"strings"
+
 	"github.com/kjk/notionapi"
 	"github.com/spf13/viper"
 	"github.com/uniplaces/carbon"
-	"log"
-	"strings"
 )
 
 type idToNameStructure struct {
@@ -221,6 +222,9 @@ func (f *FrontMatter) getDefaultFrontMatter(name, propertyType string, block *no
 	if name == "title" {
 		return ""
 	}
+	if name == "status" {
+		return "published"
+	}
 	if name == "url" {
 		return getDefaultUrlForPage(block)
 	}
@@ -370,7 +374,7 @@ func readFrontMatterValue(block *notionapi.Block, f *FrontMatter, name string) s
 
 func checkIfPublished(page *notionapi.Page, f *FrontMatter) bool {
 	status := readFrontMatterValue(page.Root(), f, "status")
-	trueValues := []string{"", getAlias("published", "Published")}
+	trueValues := []string{"published", getAlias("published", "Published")}
 	for _, trueValue := range trueValues {
 		if strings.ToLower(status) == strings.ToLower(trueValue) {
 			return true
