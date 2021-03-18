@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 	"path"
@@ -129,7 +130,7 @@ func fetchDatabaseInfo() {
 		log.Println("Fetch data for database ", db.pageID)
 
 		// Get basic data for the collection
-		resp, err := client.QueryCollection(db.collectionID, db.collectionViewID, &notionapi.Query{}, user)
+		resp, err := client.QueryCollection(db.collectionID, db.collectionViewID, json.RawMessage("{}"), user)
 		if err != nil {
 			log.Fatal("Can not read data from view.", err)
 		}
